@@ -1,0 +1,28 @@
+[
+	  {
+		         "name": "collectionMessageForPatient",
+			        "policy": "OR('Org1MSP.member','Org2MSP.member','Org3MSP.member')",
+				       "requiredPeerCount": 1,
+				              "maxPeerCount": 3,
+					             "blockToLive":0,
+						            "memberOnlyRead": false
+							      },
+
+							        {
+									       "name": "collectionMessageForSharing",
+									              "policy": "OR('Org1MSP.member','Org2MSP.member','Org3MSP.member')",
+										             "requiredPeerCount": 1,
+											            "maxPeerCount": 3,
+												           "blockToLive":0,
+													          "memberOnlyRead": false
+														    },
+														      
+														      {
+															             "name": "collectionMedicalDataStore",
+																            "policy": "OR('Org1MSP.member','Org2MSP.member','Org3MSP.member')",
+																	           "requiredPeerCount": 1,
+																		          "maxPeerCount": 3,
+																			         "blockToLive":0,
+																				        "memberOnlyRead": false
+																					  }
+]

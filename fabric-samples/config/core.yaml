@@ -541,7 +541,7 @@ chaincode:
         runtime: $(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)
 
         # whether or not golang chaincode should be linked dynamically
-        dynamicLink: false
+        dynamicLink: true
 
     java:
         # This is an image based on java:openjdk-8 with addition compiler
@@ -558,11 +558,11 @@ chaincode:
     # chaincode. The external builder detection processing will iterate over the
     # builders in the order specified below.
     externalBuilders: []
-        # - path: /path/to/directory
-        #   name: descriptive-builder-name
-        #   propagateEnvironment:
-        #      - ENVVAR_NAME_TO_PROPAGATE_FROM_PEER
-        #      - GOPROXY
+         #- path: /root/bbb/fabric-samples/chaincode/fabcar/external/bin
+          # name: mybuilder
+           # propagateEnvironment:
+           #   - ENVVAR_NAME_TO_PROPAGATE_FROM_PEER
+           #   - GOPROXY
 
     # The maximum duration to wait for the chaincode build and install process
     # to complete.
