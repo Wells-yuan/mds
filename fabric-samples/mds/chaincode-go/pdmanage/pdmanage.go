@@ -24,21 +24,21 @@ type MessageForPatientTrans struct {
 	TransactionHash      string `json:"transaction_hash"`
 	PatientPublicKeyHash string `json:"patient"` //the fieldtags are needed to keep case from bouncing around
 	Hospital             string `json:"hospital"`
-	MedicalDataID        string `json:"medical_data_id"` // 为演示添加的字段
-	AuxStr               string `json:"aux"`             // 为演示添加的字段
-	IsOld                bool   `json:"is_old"`          // 判断是新消息还是旧消息
+	MedicalDataID        string `json:"id"`     // 为演示添加的字段
+	AuxStr               string `json:"aux"`    // 为演示添加的字段
+	IsOld                bool   `json:"is_old"` // 判断是新消息还是旧消息
 }
 
 type MessageForSharingTrans struct {
 	TransactionHash      string `json:"transaction_hash"`
-	VisitorPublicKeyHash string `json:"visitor"`         //the fieldtags are needed to keep case from bouncing around
-	MedicalDataID        string `json:"medical_data_id"` // 为演示添加的字段
-	AuxStr               string `json:"aux"`             // 为演示添加的字段
+	VisitorPublicKeyHash string `json:"visitor"` //the fieldtags are needed to keep case from bouncing around
+	MedicalDataID        string `json:"id"`      // 为演示添加的字段
+	AuxStr               string `json:"aux"`     // 为演示添加的字段
 	IsOld                bool   `json:"is_old"`
 }
 
 type MedicalDataStoreTrans struct {
-	MedicalDataID string `json:"medical_data_id"`
+	MedicalDataID string `json:"id"`
 	Token         string `json:"token"`
 	Ciphertext    string `json:"ciphertext"`
 }
@@ -116,7 +116,7 @@ func (s *SmartContract) QueryMessage(ctx contractapi.TransactionContextInterface
 	}
 
 	result := new(MessageForPatientTrans)
-	modifyMessageForPatient := new(MessageForPatient)
+	// modifyMessageForPatient := new(MessageForPatient)
 	// messageForPatient := messageForPatientList[1]
 	if !messageForPatientList.IsOld {
 		result = &MessageForPatientTrans{
@@ -127,14 +127,14 @@ func (s *SmartContract) QueryMessage(ctx contractapi.TransactionContextInterface
 			AuxStr:               messageForPatientList.AuxStr,
 		}
 		messageForPatientList.IsOld = true
-		modifyMessageForPatient = messageForPatientList
+		// modifyMessageForPatient = messageForPatientList
 	}
 
 	if result == nil {
 		return nil, nil
 	}
 
-	newMessageForPatientJson, err := json.Marshal(modifyMessageForPatient)
+	newMessageForPatientJson, err := json.Marshal(messageForPatientList)
 	if err != nil {
 		return nil, err
 	}

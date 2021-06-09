@@ -47,31 +47,31 @@ var connConfigPath string
 // }
 
 type MedicalDataSummary struct {
-	ID   string
-	Ek   string
-	R    string
-	Role string
+	ID   string `json:"id"`
+	Ek   string `json:"ek"`
+	R    string `json:"r"`
+	Role string `json:"role"`
 }
 
 type SharedDataSummary struct {
-	IdB      string
-	Ek       string
-	R        string
-	IdA      string
-	Index    []int
-	Visitors []string
+	IdB      string   `json:"id_B"`
+	Ek       string   `json:"ek"`
+	R        string   `json:"r"`
+	IdA      string   `json:"id_A"`
+	Index    []int    `json:"index"`
+	Visitors []string `json:"visitors"`
 }
 
 type AccessInfo struct {
-	MedicalDataID string `json:"medical_data_id"`
-	AuxStr        string `json:"aux_str"`
+	ID  string `json:"id"`
+	Aux string `json:"aux"`
 }
 
 type TokenSummary struct {
-	ID    string
-	R     string
-	Token string
-	Ek    string
+	ID    string `json:"id"`
+	R     string `json:"r"`
+	Token string `json:"token"`
+	Ek    string `json:"ek"`
 }
 
 func init() {
@@ -218,6 +218,9 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 	if err := json.Unmarshal([]byte(medicalDataInfo), &medicalDataSummary); err != nil {
 		log.Fatalln("please check the json form of medical data summary, eg: '{\"id\":\"xx\",\"ek\":\"xx\",\"r\":\"xx\",\"role\":\"xx\"}'")
 	}
+	if medicalDataSummary.ID == "" {
+		log.Fatalln("id int medical data summary is empty, eg: '{\"id\":\"xx\",\"ek\":\"xx\",\"r\":\"xx\",\"role\":\"xx\"}'")
+	}
 	if indexStr == "" {
 		log.Fatalln("please set key array as index, eg: [\"a\",\"bb\"]")
 	}
@@ -273,6 +276,7 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 	r := randomBinInt.String()
 	ek := api.ComputePRF(privateKeyHexStr, r)
 	fmt.Println("ek is :", ek)
+	fmt.Println("r is :", r)
 
 	// 计算共享医疗数据唯一标识
 	sharedMedicalDataId, hashList, shareIndex := api.ComputeShareIDWithRawDataAndIndex(medicalDataSummary.ID,
@@ -306,7 +310,7 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 
 	// 生成零知识证明
 	fmt.Println("============ Starting generate share proof ============")
-	proof := api.GenShareProof(medicalDataID, sharedMedicalDataId, cmtA, cmtU1, cmtU2, henc, auth, patientPublicKeyStr, visitorStr, privateKeyHexStr,
+	proof := api.GenShareProof(medicalDataSummary.ID, sharedMedicalDataId, cmtA, cmtU1, cmtU2, henc, auth, patientPublicKeyStr, visitorStr, privateKeyHexStr,
 		medicalDataSummary.Ek, ek, medicalDataSummary.R, r, medicalDataSummary.Role)
 	fmt.Println("============  Done  ============")
 
@@ -341,12 +345,12 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 		log.Fatalf("marshal shared index err: %v", err)
 	}
 	log.Println("--> Submit Transaction: CreateSharedMedicalData, function creates a state of shared medical data id")
-	txID, err := contract.SubmitTransaction("CreateSharedMedicalData", medicalDataID, sharedMedicalDataId, cmtA, cmtU1, cmtU2, hex.EncodeToString(aux),
+	txID, err := contract.SubmitTransaction("CreateSharedMedicalData", medicalDataSummary.ID, sharedMedicalDataId, cmtA, cmtU1, cmtU2, hex.EncodeToString(aux),
 		auth, proof, string(hashListJson), string(shareIndexJson))
 	if err != nil {
 		log.Fatalf("Failed to Submit TransactionCreateShareID: %v", err)
 	}
-	log.Println("Create Shared Medical Data TxID is: ", txID)
+	log.Println("Create Shared Medical Data TxID is: ", string(txID))
 
 	// 处理共享医疗数据
 	var sharedMedicalData []string
@@ -375,7 +379,7 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 	// medicalDataForSharingBase64 := base64.StdEncoding.EncodeToString(medicalDataForSharingJson)
 	// 准备传输的transient字段
 	transMap := map[string][]byte{
-		"medical_data_for_sharing": []byte(medicalDataForSharingJson),
+		"medical_data_for_sharing": medicalDataForSharingJson,
 	}
 
 	// 获取智能合约实例
@@ -386,11 +390,12 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 		log.Fatalf("create upload transaction err: %v", err)
 	}
 	log.Println("--> Submit Transaction: UploadEncryptedSharedMedicalData, function upload the encrypted medical data for sharing")
-	result, err := uploadTransaction.Submit("UploadEncryptedSharedMedicalData")
+	_, err = uploadTransaction.Submit("UploadEncryptedSharedMedicalData")
 	if err != nil {
 		log.Fatalf("Failed to Submit TransactionUpload: %v", err)
+	} else {
+		log.Println(string(medicalDataForSharingJson))
 	}
-	log.Println(string(result))
 
 	// 通知被授权者有新增的医疗数据
 	messageForSharingTrans := api.MessageForSharingTrans{
@@ -414,18 +419,19 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 		log.Fatalf("create transmit transaction err: %v", err)
 	}
 	log.Println("--> Submit Transaction: TransmitMessageToShare, function forward message to visitor")
-	result, err = transmitTransaction.Submit("TransmitMessageToShare")
+	_, err = transmitTransaction.Submit("TransmitMessageToShare")
 	if err != nil {
 		log.Fatalf("Failed to Submit TransactionUpload: %v", err)
+	} else {
+		log.Println(string(messageForSharingJson))
 	}
-	log.Println(string(result))
 
 	// 构造shareDataSummary
 	sharedDataSummary := SharedDataSummary{
 		IdB:      sharedMedicalDataId,
 		Ek:       ek,
 		R:        r,
-		IdA:      medicalDataID,
+		IdA:      medicalDataSummary.ID,
 		Index:    shareIndex,
 		Visitors: []string{visitorStr},
 	}
@@ -433,13 +439,13 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 	if err != nil {
 		log.Fatalf("marshal shared data summary err: %v", err)
 	}
-	fmt.Println("new shared data summary is: ", string(sharedDataSummaryJson))
+	fmt.Println("shared data summary is: ", string(sharedDataSummaryJson))
 }
 
 // 新增共享医疗数据的被授权者
 func TransactionUpdateID(wallet *gateway.Wallet) {
 	if medicalDataInfo == "" {
-		log.Fatalln("please set the summary of shared medical data")
+		log.Fatalln("please set the summary of shared medical data, eg: '{\"id_B\":\"xx\",\"ek\":\"xx\",\"r\":\"xx\",\"id_A\":\"xx\", \"index\":\"[1,4]\", \"visitors\":\"[xx]\"}'")
 	}
 	if visitorStr == "" {
 		log.Fatalln("please set new visitor's public key")
@@ -447,7 +453,7 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 	// 解析数据
 	var sharedDataSummary SharedDataSummary
 	if err := json.Unmarshal([]byte(medicalDataInfo), &sharedDataSummary); err != nil {
-		log.Fatalln("please check the json form of summary, eg: '{\"idB\":\"xx\",\"ek\":\"xx\",\"r\":\"xx\",\"idA\":\"xx\", \"index\":\"[1,4]\", \"visitors\":\"[xx]\"}'")
+		log.Fatalf("please check the json form of summary, eg: '{\"id_B\":\"xx\",\"ek\":\"xx\",\"r\":\"xx\",\"id_A\":\"xx\", \"index\":\"[1,4]\", \"visitors\":\"[xx]\"}', err: %v", err)
 	}
 
 	// 获取app使用者的私钥
@@ -523,7 +529,7 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 	if err != nil {
 		log.Fatalf("Failed to Submit UpdateSharedMedicalData: %v", err)
 	}
-	log.Println("Update Shared Medical Data TxID is: ", txID)
+	log.Println("Update Shared Medical Data TxID is: ", string(txID))
 
 	// 给新增的被授权者发送通知消息
 	messageForSharingTrans := api.MessageForSharingTrans{
@@ -539,7 +545,7 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 	}
 	// 准备传输的transient字段
 	transMap := map[string][]byte{
-		"message_for_sharing": []byte(messageForSharingJson),
+		"message_for_sharing": messageForSharingJson,
 	}
 
 	// 获取智能合约实例
@@ -550,11 +556,12 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 		log.Fatalf("create transmit transaction err: %v", err)
 	}
 	log.Println("--> Submit Transaction: TransmitMessageToShare, function forward message to visitor")
-	result, err := transmitTransaction.Submit("TransmitMessageToShare")
+	_, err = transmitTransaction.Submit("TransmitMessageToShare")
 	if err != nil {
 		log.Fatalf("Failed to Submit TransactionUpload: %v", err)
+	} else {
+		log.Println(string(messageForSharingJson))
 	}
-	log.Println(string(result))
 
 	// sharedDataSummary
 	sharedDataSummary.Visitors = append(sharedDataSummary.Visitors, visitorStr)
@@ -568,12 +575,12 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 // 为医疗数据生成访问token
 func TransactionAccessID(wallet *gateway.Wallet) {
 	if transactionInfo == "" {
-		log.Fatalln("please set the info of transaction, eg: '{\"medical_data_id\":\"xxx\",\"aux_str\":\"xx\"}'")
+		log.Fatalln("please set the info of transaction, eg: '{\"id\":\"xxx\",\"aux\":\"xx\"}'")
 	}
 
 	var accessInfo AccessInfo
-	if err := json.Unmarshal([]byte(transactionInfo), &accessInfo); err != nil {
-		log.Fatalf("umarshal transaction info err: %v", err)
+	if err := json.Unmarshal([]byte(transactionInfo), &accessInfo); err != nil || accessInfo.ID == "" {
+		log.Fatalf("umarshal transaction info err: %v, eg: '{\"id\":\"xxx\",\"aux\":\"xx\"}'", err)
 	}
 
 	// 获取app使用者的私钥
@@ -601,8 +608,8 @@ func TransactionAccessID(wallet *gateway.Wallet) {
 	// publicKeyPem := pem.EncodeToMemory(&publicKeyBlock)
 
 	// 解密字符串，获取ek和r
-	// aux, err := hex.DecodeString(accessInfo.AuxStr)
-	aux, err := base64.StdEncoding.DecodeString(accessInfo.AuxStr)
+	aux, err := hex.DecodeString(accessInfo.Aux)
+	// aux, err := base64.StdEncoding.DecodeString(accessInfo.Aux)
 	if err != nil {
 		log.Fatalf("decode aux str err: %v", err)
 	}
@@ -625,11 +632,11 @@ func TransactionAccessID(wallet *gateway.Wallet) {
 	fmt.Println("token is :", token)
 
 	// 计算承诺
-	cmtU := api.GenCMTU(accessInfo.MedicalDataID, patientPublicKeyStr, linkKey.Ek, linkKey.R)
+	cmtU := api.GenCMTU(accessInfo.ID, patientPublicKeyStr, linkKey.Ek, linkKey.R)
 
 	// 生成零知识证明
 	fmt.Println("============ Starting generate access proof ============")
-	proof := api.GenAccessProof(accessInfo.MedicalDataID, cmtU, token, patientPublicKeyStr, linkKey.Ek, linkKey.R, r)
+	proof := api.GenAccessProof(accessInfo.ID, cmtU, token, patientPublicKeyStr, linkKey.Ek, linkKey.R, r)
 	fmt.Println("============  Done  ============")
 
 	// 展示使用
@@ -656,7 +663,7 @@ func TransactionAccessID(wallet *gateway.Wallet) {
 
 	// 发起访问医疗数据的事务
 	log.Println("--> Submit Transaction: AccessTransaction, function update token for medical data id")
-	result, err := contract.SubmitTransaction("AccessTransaction", accessInfo.MedicalDataID, cmtU, token, rHash, proof)
+	result, err := contract.SubmitTransaction("AccessTransaction", accessInfo.ID, cmtU, token, rHash, proof)
 	if err != nil {
 		log.Fatalf("Failed to Submit TransactionCreateID: %v", err)
 	}
@@ -664,7 +671,7 @@ func TransactionAccessID(wallet *gateway.Wallet) {
 
 	// 生成tokenSummary
 	tokenSummary := TokenSummary{
-		ID:    accessInfo.MedicalDataID,
+		ID:    accessInfo.ID,
 		Token: token,
 		R:     r,
 		Ek:    linkKey.Ek,
@@ -673,13 +680,19 @@ func TransactionAccessID(wallet *gateway.Wallet) {
 	if err != nil {
 		log.Fatalf("marshal token summary err: %v", err)
 	}
-	log.Println(string(tokenSummaryJson))
+	log.Println("token_summary is:", string(tokenSummaryJson))
+
+	// 生成medicalSummary
+	// medicalDataSummary := MedicalDataSummary{
+	// 	ID: accessInfo.ID,
+	// 	Role: ,
+	// }
 }
 
 // 为医疗数据生成访问token
 func TransactionDownloadID(wallet *gateway.Wallet) {
 	if tokenInfo == "" {
-		log.Fatalln("please set token info, eg:'{\"id\":\"xx\",\"token\":\"xx\",\"r\":\"xx\",\"ek\":\"xx\"}'")
+		log.Fatalln("please set token info, eg:'{\"id\":\"xx\",\"r\":\"xx\",\"ek\":\"xx\"}'")
 	}
 	var tokenSummary TokenSummary
 	if err := json.Unmarshal([]byte(tokenInfo), &tokenSummary); err != nil {
@@ -763,7 +776,7 @@ func main() {
 		TransactionCheckMessage(wallet)
 	case "share":
 		TransactionCreateShareID(wallet)
-	case "updata":
+	case "update":
 		TransactionUpdateID(wallet)
 	case "access":
 		TransactionAccessID(wallet)

@@ -139,6 +139,10 @@ func (s *SmartContract) CreateSharedMedicalData(ctx contractapi.TransactionConte
 	if err != nil || isExist == nil {
 		return "", fmt.Errorf("medical data id[%s] doesn't existed", medicalDataID)
 	}
+	isExist, err = ctx.GetStub().GetState(shareMedicalDataID)
+	if err != nil || isExist != nil {
+		return "", fmt.Errorf("shared medical data id[%s] already exists", shareMedicalDataID)
+	}
 
 	// 验证hashList能否生成相同的医疗数据id，以及共享医疗数据id计算的是否正确
 	var hashList []string

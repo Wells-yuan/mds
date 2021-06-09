@@ -89,6 +89,7 @@ func TransactionCreateID(wallet *gateway.Wallet) {
 	r := randomBinInt.String()
 	ek := api.ComputePRF(privateKeyHexStr, r)
 	fmt.Println("ek is :", ek)
+	fmt.Println("r is :", r)
 
 	// 计算医疗数据唯一标识
 	medicalDataID, _ := api.ComputeIDWithRawData(medicalDataMap, r)

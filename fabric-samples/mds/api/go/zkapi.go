@@ -32,16 +32,16 @@ type MessageForPatientTrans struct {
 	TransactionHash      string `json:"transaction_hash"`
 	PatientPublicKeyHash string `json:"patient"` //the fieldtags are needed to keep case from bouncing around
 	Hospital             string `json:"hospital"`
-	MedicalDataID        string `medical_data_id` // 为演示添加的字段
-	AuxStr               string `aux_str`         // 为演示添加的字段
-	IsOld                bool   `json:"is_old"`   // 判断是新消息还是旧消息
+	MedicalDataID        string `json:"id"`     // 为演示添加的字段
+	AuxStr               string `json:"aux"`    // 为演示添加的字段
+	IsOld                bool   `json:"is_old"` // 判断是新消息还是旧消息
 }
 
 type MessageForSharingTrans struct {
 	TransactionHash      string `json:"transaction_hash"`
-	VisitorPublicKeyHash string `json:"visitor"`  //the fieldtags are needed to keep case from bouncing around
-	MedicalDataID        string `medical_data_id` // 为演示添加的字段
-	AuxStr               string `aux_str`         // 为演示添加的字段
+	VisitorPublicKeyHash string `json:"visitor"` //the fieldtags are needed to keep case from bouncing around
+	MedicalDataID        string `json:"id"`      // 为演示添加的字段
+	AuxStr               string `json:"aux"`     // 为演示添加的字段
 	IsOld                bool   `json:"is_old"`
 }
 
@@ -59,7 +59,7 @@ type MessageForSharingTrans struct {
 // }
 
 type MedicalDataStoreTrans struct {
-	MedicalDataID string `json:"medical_data_id"`
+	MedicalDataID string `json:"id"`
 	Token         string `json:"token"`
 	Ciphertext    string `json:"ciphertext"`
 }
@@ -646,47 +646,45 @@ func GetClientPublicKeyFromCert(userCa gateway.Identity) (string, error) {
 
 // -----------------------------------------------
 
-/*
-	// update test
-	// id := "123"
-	// pkB := "1243"
-	// pkD := "222"
-	// sk := "2513"
-	// r := "6767345"
-	// ek := ComputePRF(sk, r)
+// update test
+// id := "123"
+// pkB := "1243"
+// pkD := "222"
+// sk := "2513"
+// r := "6767345"
+// ek := ComputePRF(sk, r)
 
-	// cmtU1 := GenCMTU(id, pkB, ek, r)
+// cmtU1 := GenCMTU(id, pkB, ek, r)
 
-	// cmtU2 := GenCMTU(id, pkD, ek, r)
+// cmtU2 := GenCMTU(id, pkD, ek, r)
 
-	// henc := "c3a"
-	// auth := ComputePRF(sk, henc)
+// henc := "c3a"
+// auth := ComputePRF(sk, henc)
 
-	// fmt.Println("cmtU1 is:", cmtU1)
-	// fmt.Println("cmtU2 is:", cmtU2)
-	// fmt.Println("henc is:", henc)
-	// fmt.Println("auth is:", auth)
+// fmt.Println("cmtU1 is:", cmtU1)
+// fmt.Println("cmtU2 is:", cmtU2)
+// fmt.Println("henc is:", henc)
+// fmt.Println("auth is:", auth)
 
-	// proof := GenUpdateProof(id, cmtU1, cmtU2, henc, auth, pkB, pkD, sk, ek, r)
-	// if string(proof[0:10]) == "0000000000" {
-	// 	fmt.Println("can't generate proof")
-	// 	return
-	// }
-	// fmt.Println(proof)
-	// fmt.Println(string(proof))
+// proof := GenUpdateProof(id, cmtU1, cmtU2, henc, auth, pkB, pkD, sk, ek, r)
+// if string(proof[0:10]) == "0000000000" {
+// 	fmt.Println("can't generate proof")
+// 	return
+// }
+// fmt.Println(proof)
+// fmt.Println(string(proof))
 
-	// VerifyUpdateProof(id, cmtU1, cmtU2, henc, auth, proof)
+// VerifyUpdateProof(id, cmtU1, cmtU2, henc, auth, proof)
 
-	id := "123"
-	henc := "c3a"
+// id := "123"
+// henc := "c3a"
 
-	proof := "1994aebdaf0b3bb3e09f2f47cbe04ce672d44c8b1fc7e988eab70cf6300c1e5629e194cb6545d8bf2c18d352b52854a07049fbb3a3f8057440015dca7c4928ed0d63dc4a19132981af321a9a841a981e33875b21eb62f18733c2c8834dbadf3d2052189c1122db7343729dd423d9031ec6c01f4173fdca3c265636a39ec01edf0beafd1fa6f9e958288afb49ccfc1fc2f27599e303755c777ef79e35138dc86d2003feb7cfec6c6b9c29497b800d6919af5782bf887be7471d1cb8db6c300d251ad48f05461b6c94724e88761d821dab873ab13f1b71f36e3fe1307b6657f9a40e3fd131c1db91552a4348de6c14847e0df5c1924fa17dadbda91988f9898a73"
-	cmtU1 := "199a0ba34eeecb896988559bd5b01555dc548354b8ce439e10137cef3260bb87"
-	cmtU2 := "2cb150866c66415f44cf0bbb28e2abfff41ad3d3166260140c23c94404fd542b"
-	auth := "dc341c53b4577e8f2edf722bc5d5c0e9980610a6140cf826af5c8a388468eeeb"
+// proof := "1994aebdaf0b3bb3e09f2f47cbe04ce672d44c8b1fc7e988eab70cf6300c1e5629e194cb6545d8bf2c18d352b52854a07049fbb3a3f8057440015dca7c4928ed0d63dc4a19132981af321a9a841a981e33875b21eb62f18733c2c8834dbadf3d2052189c1122db7343729dd423d9031ec6c01f4173fdca3c265636a39ec01edf0beafd1fa6f9e958288afb49ccfc1fc2f27599e303755c777ef79e35138dc86d2003feb7cfec6c6b9c29497b800d6919af5782bf887be7471d1cb8db6c300d251ad48f05461b6c94724e88761d821dab873ab13f1b71f36e3fe1307b6657f9a40e3fd131c1db91552a4348de6c14847e0df5c1924fa17dadbda91988f9898a73"
+// cmtU1 := "199a0ba34eeecb896988559bd5b01555dc548354b8ce439e10137cef3260bb87"
+// cmtU2 := "2cb150866c66415f44cf0bbb28e2abfff41ad3d3166260140c23c94404fd542b"
+// auth := "dc341c53b4577e8f2edf722bc5d5c0e9980610a6140cf826af5c8a388468eeeb"
 
-	VerifyUpdateProof(id, cmtU1, cmtU2, henc, auth, proof)
-*/
+// VerifyUpdateProof(id, cmtU1, cmtU2, henc, auth, proof)
 
 // id := "123"
 // pk := "1243"
