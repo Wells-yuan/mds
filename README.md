@@ -24,7 +24,7 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 | 证书授权服务 | Hyperledger  Fabric | v1.5.0        |
 | 链码编程语言 | Go语言              | v1.14         |
 
-1. 安装git、curl、docker、go
+1. 安装git、curl、docker、go、node
 
 2. 运行脚本安装Fabric Sample、docker images、和Fabric的二进制文件，运行前确保docker正在运行
 
@@ -37,10 +37,24 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 3. 测试网络
 
    ```bash
+   # 切换到fabric-samples/test-network
+   cd fabric-samples/test-network
    # 启动网络
    ./network.sh up createChannel -c mychannel -ca
    # 关闭网络
    ./network.sh down
+   ```
+
+4. 将mds/fabric-samples下的文件移动到第2步下载的fabric-samples下文件夹下
+
+   ```bash
+   # 下载mds源码
+   git clone https://github.com/Wells-yuan/mds.git
+   # 文件路径如下
+   #.
+   #├── fabric-samples
+   #└── mds
+   cp -rf ./mds/fabric-samples/* fabric-samples/
    ```
 
 
@@ -65,10 +79,12 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
    ./src/share_key
    ./src/update_key
    ./src/access_key
-   # 复制密钥对到/usr/local/prfkey
-   cp -i ./*.raw /usr/local/prfKey/
-   # 复制动态库到/usr/local/lib
-   cp -i ./src/libzk_produce.so ./src/libzk_share.so ./src/libzk_update.so ./src/libzk_access.so ./depends/libsnark/libsnark/libsnark.so ./depends/libsnark/depends/libff/libff/libff.so /usr/local/lib
+   # 复制密钥对到/usr/local/prfkey和fabric-samples/mds/mydocker/prfKey
+   cp -rf ./*.raw /usr/local/prfKey/
+   cp -rf ./*raw ~/github/fabric-samples/mds/mydocker/prfKey
+   # 复制动态库到/usr/local/lib和fabric-samples/mds/mydocker/lib
+   cp -rf ./src/libzk_produce.so ./src/libzk_share.so ./src/libzk_update.so ./src/libzk_access.so ./depends/libsnark/libsnark/libsnark.so ./depends/libsnark/depends/libff/libff/libff.so /usr/local/lib
+   cp -rf ./src/libzk_produce.so ./src/libzk_share.so ./src/libzk_update.so ./src/libzk_access.so ./depends/libsnark/libsnark/libsnark.so ./depends/libsnark/depends/libff/libff/libff.so ~/github/fabric-samples/mds/mydocker/lib
    ```
 
 
@@ -77,22 +93,24 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 
 1. 设置peer节点构建外部链码的脚本
 
+   > 即fabric-samples/mds/mydocker/myBuilder文件夹下的脚本
+
 2. 修改`fabric-samples/config/core.yaml`
-
-   ```bash
-   externalBuilders:
-       - path: /opt/gopath/src/github.com/hyperledger/sampleBuilder
-         name: mybuilder
-   ```
-
-3. 修改`fabric-samples/test-network/docker/docker-compose-test-net.yaml`
-
-   ```bash
-   volumes:
-       - /root/bbb/fabric-samples/asset-transfer-basic/chaincode-external/sampleBuilder:/opt/gopath/src/github.com/hyperledger/sampleBuilder
-       - /root/bbb/fabric-samples/mds/tmpt/core.yaml:/etc/hyperledger/fabric/core.yaml
-   ```
-
+   
+    ```bash
+    externalBuilders:
+        - path: /opt/gopath/src/github.com/hyperledger/sampleBuilder
+          name: mybuilder
+    ```
+    修改`fabric-samples/test-network/docker/docker-compose-test-net.yaml`
+   
+    ```bash
+    # 将/root/bbb/fabric-samples替换为fabric-samples所在路径
+    volumes:
+        - /root/bbb/fabric-samples/mds/mydocker/myBuilder:/opt/gopath/src/github.com/hyperledger/myBuilder
+        - /root/bbb/fabric-samples/mds/mydocker/core.yaml:/etc/hyperledger/fabric/core.yaml
+```
+   
 4. 给外部链码打包信息包，安装在各个需要调用外部链码的组织上
 
    1. 准备好`chaincode.env`
@@ -105,7 +123,7 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
       # CHAINCODE_ID must be set to the Package ID that is assigned to the chaincode
       # on install. The `peer lifecycle chaincode queryinstalled` command can be
       # used to get the ID after install if required
-      CHAINCODE_ID=mdmanage_1.0:6aeecdda20ee07cb527dd11c19a64cf36e117e8a0d35b0d5d9187988c3dae67c
+      CHAINCODE_ID=mdmanage_1.0:e42ce496cca0ad2dbe7be3c3155aca0d4e32a4fe5ffabc456b9b6e004781533a
       
       ```
       
@@ -140,17 +158,20 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 
       `label`就是打包链码时的标签
 
-   4. 打包信息包
+   4. 打包链码包
 
       ```bash
+      # 切换到以下路径
+      cd fabric-samples/mds/mydocker/config/
       # 将connection.json打包为 code.tar.gz
       tar cfz code.tar.gz connection.json
       # 将 metadata.json 和 code.tar.gz 一起打包为 链码包
       tar cfz mdmanage-external.tgz metadata.json code.tar.gz
       # 方便后续操作，将 mdmanage-external.tgz 移动到 fabric-samples/test-network/目录下
-      cp mdmanage-external.tgz fabric-samples/test-network/
+      cp mdmanage-external.tgz ../../../test-network/
       ```
-
+      
+   5. 安装`mdmanage-external.tgz`之后替换`chaincode.env`中的`CHAINCODE_ID`
 
 
 
@@ -159,8 +180,11 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 1. 启动网络，准备链码包
 
    ```bash
+   # 切换到以下路径
+   cd fabric-samples/test-network
+   # 启动网络
    ./network.sh up createChannel -c mychannel -ca
-   
+   # 安装链码包
    export PATH=${PWD}/../bin:$PATH
    export FABRIC_CFG_PATH=$PWD/../config/
    export CORE_PEER_TLS_ENABLED=true
@@ -184,13 +208,20 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 2. 准备执行外部链码的容器
 
    ```bash
+   # 切换到/fabric-samples/mds/chaincode-go/mdmanage
+   # 编译mdmanage链码
+   go build
+   # 将mdmanage移动到/fabric-samples/mds/mydocker/external/
+   mv mdmanage ../../mydocker/external/chaincode
    # 切换到/fabric-samples/mds/mydocker/
+   cd ../../mydocker
+   # 构建容器
    docker build -t mds/mdmanage:1.0 .
    # 启动容器
    docker run -it --rm --name mdmanage.example.com --hostname mdmanage.example.com --env-file ./config/chaincode.env --network=fabric_test mds/mdmanage:1.0
    ```
 
-3. 安装外部链码mdmanage
+3. 批准外部链码mdmanage
 
    ```bash
    export CORE_PEER_LOCALMSPID="Org2MSP"
@@ -213,7 +244,7 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 4. 安装私有数据维护链码pdmanage
 
    ```bash
-   ./network.sh deployCC -ccn pdmanage -ccp ../mds/chaincode-go/pdmanage/ -ccl go -ccep "OR('Org1MSP.peer','Org2MSP.peer')" -cccg ~/fabric-samples/mds/chaincode-go/pdmanage/collections_config.json
+   ./network.sh deployCC -ccn pdmanage -ccp ../mds/chaincode-go/pdmanage/ -ccl go -ccep "OR('Org1MSP.peer','Org2MSP.peer')" -cccg ../mds/chaincode-go/pdmanage/collections_config.json
    ```
 
 5. 查询成功安装的链码
@@ -229,15 +260,18 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 1. 注册用户
 
    ```bash
+   # 新开终端，切换到/fabric-samples/mds/application-go/patient
    export LD_LIBRARY_PATH=/usr/local/lib
    rm -r wallet/
    rm -r ../hospital/wallet/
+   # 第一次需要运行npm install
    node enrollAdmin.js
    node registerUser.js patientA
    node registerUser.js patientB
    node registerUser.js agencyA
    go run patient.go -u patientA -f print
    cd ../hospital
+   # 第一次需要运行npm install
    node enrollAdmin.js
    node registerUser.js hospitalA
    ```
@@ -245,15 +279,16 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
 2. 修改对应命令，进行方案测试
 
    ```bash
-   go run hospital.go -u hospitalA -f create -p MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMmt/PAwoj52M4hAgDDm2RJ6a2RSi1nZSGdlB6oJu5uDLwHeo+oy68zgvMB8qdqeJ4ZmiCHhW4BKOLtqUScMT/Q '{"白细胞计数":"9.25", "血小板计数": "368", "血红蛋白量":"152"}'
+   go run hospital.go -u hospitalA -f create -p 3059301306072a8648ce3d020106082a8648ce3d03010703420004d0d15a3ce90738eeaed4e7f74eb1a10a2a696c88fb39ea9a426e4a5c87cb2fd667b7a4906507314c2a88974541c5ab87447e1822464dcc2ae5bc21018bd67123 '{"白细胞计数":"9.25", "血小板计数": "368", "血红蛋白量":"152"}'
    cd ../patient
    go run patient.go -u patientA -f check
-   go run patient.go -u patientA -f access -t '{"id":"412836aa2e4afc9b9b5131415b1df07af688ca82ece2b5c661c027443cbd43b3","aux":"04905047c1816c5940e402795cbabaa3b467678a22d876765900df87e751ef5b7e2b0eadca040359846b8d349166d16854c87a5624e841460a6f263b674bc0e9d233b7680c0c67a17d963da47a3817659bd3e82ee2091816d673975e366647c5900c1a6df95b0c23819e35a23c6e80e5fef08279fdbfa178d8531323dba6918f8a4f19404d3b14e88f701a313c4a08f863846bf686acab48cfc97668f8b40979858992468681ba0d079a7b4582ba517dbdef9d6abf363054319ee0369e93f1b8c895a0d30b18cc9ecd21be4281dadf009280"}'
-   go run patient.go -u patientA -f download -r '{"id":"412836aa2e4afc9b9b5131415b1df07af688ca82ece2b5c661c027443cbd43b3","r":"5140877536912537","ek":"44784b2f5dfce1b7fad7070526fced004f379a4cbf325a0f26cbbf441557c252"}'
-   go run patient.go -u patientA -f share -s '{"id":"412836aa2e4afc9b9b5131415b1df07af688ca82ece2b5c661c027443cbd43b3","r":"39724891291495031","ek":"44784b2f5dfce1b7fad7070526fced004f379a4cbf325a0f26cbbf441557c252","role":"30450220646a5376db0662be985c3bd3700e7d14bdfebd45727eb80a2867d55068112bf9022100dd54e948ae2ff529ab38dfb28d7c130181c04f2cc9c956601552a6971652221b"}' -k '白细胞计数,血红蛋白量' -v MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkEZUOzU/gVz0l2x0ZJOu2Bgv+j7B3pqelazVrf5JtPynfk/h2lk8s6AQ65dE8am+9QbnZVLgCxQSyloa+fUVeA '{"白细胞计数":"9.25", "血小板计数": "368", "血红蛋白量":"152"}'
+   go run patient.go -u patientA -f access -t '{"id":"bde9b401b8648dbdaf4a1e147466b04b8d8cef723886468e602b35f2ef003871","aux":"0422c939e079d55c434ff0c14f5fe6d14319b28b489f3be31a8e32144f330fc880946640aea885cd89cf5a5b47aae93259507c0191af57246f1103807c52bc5bb44cb4704b2c3d0a22203299b0ca216a07dd5cbeb17a2c57e950c2e22ecddc2d9e5afa678635842a93d0295f9e9095c3d37b1c1fbbd1e6542d3d98e5a3e048c2147370e3f0fff12c21d5ecd8d053a5519febadb9ac49755ced3328b8b280132917afdfd302d29283283490fda296e100b807a6e490da671c4b7967dc193cb0ecdb7e3c68270280fa91c007b0a8b9bc86bbe1"}'
+   # 该命令中的随机数r是生成token所需的r
+   go run patient.go -u patientA -f download -r '{"id":"bde9b401b8648dbdaf4a1e147466b04b8d8cef723886468e602b35f2ef003871","r":"27033842393301284","ek":"2c6f77ac53bdca9c7f48badbcadeb7d1e00455bd8aa9ce7ee4b615b2a7cc0c3c"}'
+   # 该命令中的随机数r是生成ek所需的r，role即是produce事务中对医疗数据唯一标识产生的数字签名
+   go run patient.go -u patientA -f share -s '{"id":"bde9b401b8648dbdaf4a1e147466b04b8d8cef723886468e602b35f2ef003871","r":"13399548544741956","ek":"2c6f77ac53bdca9c7f48badbcadeb7d1e00455bd8aa9ce7ee4b615b2a7cc0c3c","role":"304402201bb197bf8fa79370747d18d54d59d7eb9b8bfc14a00cc03970b797d8bdaea6400220262e107f569c86be493f290b17e502b366fb55778aea4cad36146fdca5d6bf41"}' -k '白细胞计数,血红蛋白量' -v 3059301306072a8648ce3d020106082a8648ce3d03010703420004e36e16e9a20bcdc1adf1e5739ba56301959caeb241585ccd88410a60f8d7901a0c1cc26fc94c2d661ab60d9a0d247610dc5e4653c0c5246f1e78cdeaa76ca59e '{"白细胞计数":"9.25", "血小板计数": "368", "血红蛋白量":"152"}'
    go run patient.go -u agencyA -f check
-   go run patient.go -u patientA -f update -s '{"id_B":"b58651dc10fc14af288dd672a2c9342aee97835a18871dde8e987998deeff57f","ek":"6a7d8ed99e5dfb4e1269b9b0da193e06cf3fef1817dc51fe86194d3f2810e6db","r":"60757519383210405","id_A":"412836aa2e4afc9b9b5131415b1df07af688ca82ece2b5c661c027443cbd43b3", "index":[0,2], "visitors":["MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkEZUOzU/gVz0l2x0ZJOu2Bgv+j7B3pqelazVrf5JtPynfk/h2lk8s6AQ65dE8am+9QbnZVLgCxQSyloa+fUVeA"]}' -v MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEYET557h+MoF7O0Fjtc0SIB1aE2pOp9EXyWZ55VsTS8VuUBNqKk2ESxMHRYzi3zXepkrSobvXXznDzZ/0X07dmw
+   go run patient.go -u patientA -f update -s '{"id_B":"b525ee87d3d1ea744e9a2705b2f32d2f70d190be375f6d6be92c7ecaf30ab2b4","ek":"10ce445c2be2c7f5b225fe992ad4f90b506c48707ecbe04ae55f03e1e9e07fdd","r":"19889659903513476","id_A":"bde9b401b8648dbdaf4a1e147466b04b8d8cef723886468e602b35f2ef003871","index":[0,2],"visitors":["3059301306072a8648ce3d020106082a8648ce3d03010703420004e36e16e9a20bcdc1adf1e5739ba56301959caeb241585ccd88410a60f8d7901a0c1cc26fc94c2d661ab60d9a0d247610dc5e4653c0c5246f1e78cdeaa76ca59e"]}' -v 3059301306072a8648ce3d020106082a8648ce3d030107034200048419f2aaa8943bab3f6214a1cab571010890fed10890b8a4960b36a6baaf5a263f6b519caaba645ad08cefc783bce220f50fb0d146707e783d803b2b234b1717
    go run patient.go -u patientB -f check
+   go run patient.go -u patientB -f queryall
    ```
-
-   
