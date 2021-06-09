@@ -102,76 +102,76 @@ MDS方案的测试网络结构如下，链码S1和S2分别对应`mdmanage`和`pd
         - path: /opt/gopath/src/github.com/hyperledger/sampleBuilder
           name: mybuilder
     ```
-    修改`fabric-samples/test-network/docker/docker-compose-test-net.yaml`
+    
+   修改`fabric-samples/test-network/docker/docker-compose-test-net.yaml`
    
     ```bash
     # 将/root/bbb/fabric-samples替换为fabric-samples所在路径
     volumes:
         - /root/bbb/fabric-samples/mds/mydocker/myBuilder:/opt/gopath/src/github.com/hyperledger/myBuilder
-        - /root/bbb/fabric-samples/mds/mydocker/core.yaml:/etc/hyperledger/fabric/core.yaml
-```
+    - /root/bbb/fabric-samples/mds/mydocker/core.yaml:/etc/hyperledger/fabric/core.yaml
+    ```
    
-4. 给外部链码打包信息包，安装在各个需要调用外部链码的组织上
+3. 给外部链码打包信息包，安装在各个需要调用外部链码的组织上
 
-   1. 准备好`chaincode.env`
+    1. 准备好`chaincode.env`
 
-      ```bash
-      # CHAINCODE_SERVER_ADDRESS must be set to the host and port where the peer can
-      # connect to the chaincode server
-      CHAINCODE_SERVER_ADDRESS=mdmanage.example.com:9999
-      
-      # CHAINCODE_ID must be set to the Package ID that is assigned to the chaincode
-      # on install. The `peer lifecycle chaincode queryinstalled` command can be
-      # used to get the ID after install if required
-      CHAINCODE_ID=mdmanage_1.0:e42ce496cca0ad2dbe7be3c3155aca0d4e32a4fe5ffabc456b9b6e004781533a
-      
-      ```
-      
-      `CHAINCODE_SERVER_ADDRESS`指运行外部链码的网络地址
-      
-      `CHAINCODE_ID`指安装好的外部链码信息包的`Package ID`
-      
-      在外部链码源码文件的`main` 函数中，会启动一个`chaincode server`来监听该网络地址和链码包ID，完成与需要执行该外部链码的peer节点的通信
-      
-   2. 准备好connect.json
+        ```bash
+        # CHAINCODE_SERVER_ADDRESS must be set to the host and port where the peer can
+        # connect to the chaincode server
+        CHAINCODE_SERVER_ADDRESS=mdmanage.example.com:9999
+        
+        # CHAINCODE_ID must be set to the Package ID that is assigned to the chaincode
+        # on install. The `peer lifecycle chaincode queryinstalled` command can be
+        # used to get the ID after install if required
+        CHAINCODE_ID=mdmanage_1.0:e42ce496cca0ad2dbe7be3c3155aca0d4e32a4fe5ffabc456b9b6e004781533a
+        ```
 
-      ```json
-      {
-          "address": "mdmanage.example.com:9999",
-          "dial_timeout": "10s",
-          "tls_required": false
-      }
-      ```
+        `CHAINCODE_SERVER_ADDRESS`指运行外部链码的网络地址
 
-      `address`为启动image时赋予的hostname和Dockerfile中暴露的端口号
+        `CHAINCODE_ID`指安装好的外部链码信息包的`Package ID`
 
-   3. 准备好`metadata.json`
+        在外部链码源码文件的`main` 函数中，会启动一个`chaincode server`来监听该网络地址和链码包ID，完成与需要执行该外部链码的peer节点的通信
 
-      ```json
-      {
-          "type": "external",
-          "label": "mdmanage_1.0"
-      }
-      ```
+    2. 准备好connect.json
 
-      `type`表明该链码包是外部链码的信息包，一般`type`为链码的语言类型
+        ```bash
+        {
+            "address": "mdmanage.example.com:9999",
+            "dial_timeout": "10s",
+            "tls_required": false
+        }
+        ```
 
-      `label`就是打包链码时的标签
+        `address`为启动image时赋予的hostname和Dockerfile中暴露的端口号
 
-   4. 打包链码包
+    3. 准备好`metadata.json`
 
-      ```bash
-      # 切换到以下路径
-      cd fabric-samples/mds/mydocker/config/
-      # 将connection.json打包为 code.tar.gz
-      tar cfz code.tar.gz connection.json
-      # 将 metadata.json 和 code.tar.gz 一起打包为 链码包
-      tar cfz mdmanage-external.tgz metadata.json code.tar.gz
-      # 方便后续操作，将 mdmanage-external.tgz 移动到 fabric-samples/test-network/目录下
-      cp mdmanage-external.tgz ../../../test-network/
-      ```
-      
-   5. 安装`mdmanage-external.tgz`之后替换`chaincode.env`中的`CHAINCODE_ID`
+        ```bash
+        {
+            "type": "external",
+            "label": "mdmanage_1.0"
+        }
+        ```
+
+        `type`表明该链码包是外部链码的信息包，一般`type`为链码的语言类型
+
+        `label`就是打包链码时的标签
+
+    4. 打包链码包
+
+        ```bash
+        # 切换到以下路径
+        cd fabric-samples/mds/mydocker/config/
+        # 将connection.json打包为 code.tar.gz
+        tar cfz code.tar.gz connection.json
+        # 将 metadata.json 和 code.tar.gz 一起打包为 链码包
+        tar cfz mdmanage-external.tgz metadata.json code.tar.gz
+        # 方便后续操作，将 mdmanage-external.tgz 移动到 fabric-samples/test-network/目录下
+        cp mdmanage-external.tgz ../../../test-network/
+        ```
+
+    5. 安装`mdmanage-external.tgz`之后替换`chaincode.env`中的`CHAINCODE_ID`
 
 
 
