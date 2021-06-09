@@ -74,7 +74,7 @@ func TransactionCreateID(wallet *gateway.Wallet) {
 	fmt.Println("private key pem is: ", privateKeyStr)
 	privateKeyHexStr := hex.EncodeToString([]byte(privateKeyStr))
 	// 获取app使用者的公钥
-	publicKeyBase64Str, err := api.GetClientPublicKeyFromCert(userIdentity)
+	publicKeyHex64Str, err := api.GetClientPublicKeyFromCert(userIdentity)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -104,7 +104,7 @@ func TransactionCreateID(wallet *gateway.Wallet) {
 	fmt.Println("signature is: ", signatureStr)
 
 	// 加密对称密钥和随机数
-	patientPublicKey, err := base64.RawStdEncoding.DecodeString(patientPublicKeyStr)
+	patientPublicKey, err := hex.DecodeString(patientPublicKeyStr)
 	if err != nil {
 		log.Fatalf("decode public key string err: %v", err)
 	}
@@ -176,10 +176,9 @@ func TransactionCreateID(wallet *gateway.Wallet) {
 	if err != nil {
 		log.Fatalf("marshal medical data for patient err: %v", err)
 	}
-	// medicalDataForPatientBase64 := base64.StdEncoding.EncodeToString(medicalDataForPatientJson)
 	// 准备传输的transient字段
 	transMap := map[string][]byte{
-		"medical_data_for_patient": []byte(medicalDataForPatientJson),
+		"medical_data_for_patient": medicalDataForPatientJson,
 	}
 
 	// 获取智能合约实例
@@ -204,7 +203,7 @@ func TransactionCreateID(wallet *gateway.Wallet) {
 	messageForPatientTrans := api.MessageForPatientTrans{
 		TransactionHash:      string(txID),
 		PatientPublicKeyHash: api.ComputeCRH([]byte(patientPublicKeyStr)),
-		Hospital:             publicKeyBase64Str,
+		Hospital:             publicKeyHex64Str,
 		MedicalDataID:        medicalDataID,
 		AuxStr:               hex.EncodeToString(aux),
 	}

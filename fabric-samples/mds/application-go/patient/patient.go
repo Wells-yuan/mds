@@ -158,7 +158,7 @@ func TransactionPrintAllUserPublicKey(wallet *gateway.Wallet) {
 			fmt.Printf("parse %s's public key from cert err\n", userId)
 		}
 		fmt.Println(userId, "'s public key is: ", patientPublicKeyStr)
-		publicKeyDer, err := base64.RawStdEncoding.DecodeString(patientPublicKeyStr)
+		publicKeyDer, err := hex.DecodeString(patientPublicKeyStr)
 		if err != nil {
 			fmt.Printf("decode public key string err: %v\n", err)
 		}
@@ -283,7 +283,7 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 		rawMedicalDataMap, indexUnique, medicalDataSummary.R, r)
 
 	// 加密对称密钥和随机数
-	patientPublicKey, err := base64.RawStdEncoding.DecodeString(visitorStr)
+	patientPublicKey, err := hex.DecodeString(visitorStr)
 	if err != nil {
 		log.Fatalf("decode public key string err: %v", err)
 	}
@@ -408,10 +408,9 @@ func TransactionCreateShareID(wallet *gateway.Wallet) {
 	if err != nil {
 		log.Fatalf("marshal message for Sharing err: %v", err)
 	}
-	// messageForSharingBase64 := base64.StdEncoding.EncodeToString(messageForSharingJson)
 	// 准备传输的transient字段
 	transMap = map[string][]byte{
-		"message_for_sharing": []byte(messageForSharingJson),
+		"message_for_sharing": messageForSharingJson,
 	}
 	// 将消息交由链码转发（也是存入私有数据库，由被授权者发送请求查询是否有新的医疗数据）
 	transmitTransaction, err := contract.CreateTransaction("TransmitMessageToShare", gateway.WithTransient(transMap))
@@ -472,7 +471,7 @@ func TransactionUpdateID(wallet *gateway.Wallet) {
 	}
 
 	// 加密对称密钥和随机数
-	visitorPublicKey, err := base64.RawStdEncoding.DecodeString(visitorStr)
+	visitorPublicKey, err := hex.DecodeString(visitorStr)
 	if err != nil {
 		log.Fatalf("decode public key string err: %v", err)
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -98,7 +97,7 @@ func (s *SmartContract) QueryMessage(ctx contractapi.TransactionContextInterface
 	}
 
 	// 计算患者公钥
-	patientPublicKeyStr := base64.RawStdEncoding.EncodeToString(publicKeyDer)
+	patientPublicKeyStr := hex.EncodeToString(publicKeyDer)
 	publicKeyHash := ComputeCRH([]byte(patientPublicKeyStr))
 
 	// 目前只支持一条新消息，后面的新消息会覆盖之前的消息，因为这里以用户公钥hash值作为key
@@ -163,7 +162,7 @@ func (s *SmartContract) QueryMessageForSharing(ctx contractapi.TransactionContex
 	}
 
 	// 计算用户公钥hash
-	patientPublicKeyStr := base64.RawStdEncoding.EncodeToString(publicKeyDer)
+	patientPublicKeyStr := hex.EncodeToString(publicKeyDer)
 	publicKeyHash := ComputeCRH([]byte(patientPublicKeyStr))
 
 	// 目前只支持一条新消息，后面的新消息会覆盖之前的消息，因为这里以用户公钥hash值作为key

@@ -14,7 +14,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -539,8 +538,8 @@ func GetClientPublicKeyFromCert(userCa gateway.Identity) (string, error) {
 	if err != nil {
 		fmt.Println("marshal PKIXPublicKey err: ", err)
 	}
-	// 进行base64编码，对外公布
-	patientPublicKeyStr := base64.RawStdEncoding.EncodeToString(publicKeyDer)
+	// 转换成十六机制字符串，对外公布
+	patientPublicKeyStr := hex.EncodeToString(publicKeyDer)
 	return patientPublicKeyStr, nil
 }
 
